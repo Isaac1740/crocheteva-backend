@@ -1,5 +1,10 @@
 from fastapi import APIRouter, Depends, Form
 from sqlalchemy.orm import Session
+from fastapi import Request
+import hmac
+import hashlib
+import json
+import os
 
 from app.database import SessionLocal
 from app.models.cart import Cart
@@ -49,8 +54,8 @@ def place_order(
         phone=phone,
         address=address,
         total_price=0,
-        status="Confirmed",
-        payment_status="Paid"
+        status="Pending Verification",
+        payment_status="Processing"
     )
 
     db.add(order)
@@ -115,54 +120,6 @@ def place_order(
 
     db.commit()
 
-    # 📧 ADMIN EMAIL
-    send_email(
-        "hello.evas.crochet26@gmail.com",
-        "🧶 New Paid Order",
-        f"""
-🧶 NEW PAID ORDER
-
-Customer Name: {order.full_name}
-Phone: {order.phone}
-Email: {order.email}
-
-Address:
-{order.address}
-
-------------------------
-Items Ordered:
-{items_text}
-
-------------------------
-Products Total: ₹{total}
-Shipping: ₹{shipping_total}
-Final Total: ₹{final_total}
-
-✅ Payment Status: PAID
-"""
-    )
-
-    # 📧 CUSTOMER EMAIL
-    send_email(
-        email,
-        "Order Confirmed 🧶",
-        f"""
-Hi {full_name},
-
-Your payment was successful 💖
-
-Items Ordered:
-{items_text}
-
-Shipping: ₹{shipping_total}
-Total Paid: ₹{final_total}
-
-Your order has been confirmed 🧶✨
-
-Thank you for shopping with Eva Crochet 💕
-"""
-    )
-
     return {"message": "Order placed successfully ✅"}
 
 
@@ -204,3 +161,96 @@ def update_status(
     db.commit()
 
     return {"message": f"Order updated to {status} ✅"}
+
+
+# 🔥 RAZORPAY WEBHOOK
+@router.post("/razorpay-webhook")
+async def razorpay_webhook(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+
+    body = await request.body()
+
+    received_signature = request.headers.get(
+        "X-Razorpay-Signature"
+    )
+
+    webhook_secret = os.getenv(
+        "RAZORPAY_WEBHOOK_SECRET"
+    )
+
+    generated_signature = hmac.new(
+        webhook_secret.encode(),
+        body,
+        hashlib.sha256
+    ).hexdigest()
+
+    # ❌ INVALID WEBHOOK
+    if generated_signature != received_signature:
+        return {"status": "invalid signature"}
+
+    payload = json.loads(body)
+
+    event = payload.get("event")
+
+    # ✅ PAYMENT SUCCESS
+    if event == "payment.captured":
+
+        payment = payload["payload"]["payment"]["entity"]
+
+        print("✅ PAYMENT VERIFIED")
+        print(payment)
+
+        # ✅ GET LATEST PENDING ORDER
+        order = (
+            db.query(Order)
+            .filter(Order.payment_status == "Processing")
+            .order_by(Order.id.desc())
+            .first()
+        )
+
+        if order:
+
+            # ✅ UPDATE ORDER STATUS
+            order.status = "Confirmed"
+            order.payment_status = "Paid"
+
+            db.commit()
+
+            # ✅ ADMIN EMAIL
+            send_email(
+                "hello.evas.crochet26@gmail.com",
+                "🧶 New Confirmed Order",
+                f"""
+🧶 NEW CONFIRMED ORDER
+
+Customer Name: {order.full_name}
+Phone: {order.phone}
+Email: {order.email}
+
+Address:
+{order.address}
+
+✅ Payment Verified Successfully
+"""
+            )
+
+            # ✅ CUSTOMER EMAIL
+            send_email(
+                order.email,
+                "Order Confirmed 🧶",
+                f"""
+Hi {order.full_name},
+
+Your payment has been verified successfully 💖
+
+Your order is now confirmed 🧶✨
+
+Thank you for shopping with Eva Crochet 💕
+"""
+            )
+
+        return {"status": "payment verified"}
+
+    return {"status": "ignored"}
