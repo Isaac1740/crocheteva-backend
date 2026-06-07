@@ -1,16 +1,24 @@
 import os
-import smtplib
-from email.mime.text import MIMEText
+import resend
+
+resend.api_key = os.getenv("RESEND_API_KEY")
+
 
 def send_email(to_email, subject, body):
-    sender = os.getenv("EMAIL_USER")
-    password = os.getenv("EMAIL_PASS")
 
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = to_email
+    try:
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(sender, password)
-        server.send_message(msg)
+        response = resend.Emails.send({
+            "from": "onboarding@resend.dev",
+            "to": to_email,
+            "subject": subject,
+            "html": f"<pre>{body}</pre>"
+        })
+
+        print(f"EMAIL SENT TO: {to_email}")
+        print("RESEND RESPONSE:", response)
+
+    except Exception as e:
+
+        print("EMAIL ERROR:", str(e))
+        raise

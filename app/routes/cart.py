@@ -18,6 +18,13 @@ def get_db():
 # 🛒 ADD TO CART
 @router.post("/cart")
 def add_to_cart(data: CartCreate, db: Session = Depends(get_db)):
+
+    print("ADDING TO CART:")
+    print(f"SESSION: {data.session_id}")
+    print(f"PRODUCT: {data.product_id}")
+    print(f"QUANTITY: {data.quantity}")
+    print(f"COLOR: {data.color}")
+
     item = Cart(
         session_id=data.session_id,
         product_id=data.product_id,
@@ -28,7 +35,7 @@ def add_to_cart(data: CartCreate, db: Session = Depends(get_db)):
     db.add(item)
     db.commit()
 
-    return {"message": "Added to cart 🛒"}
+    return {"message": "Added to cart 🛒"}  
 
 
 # 🛒 VIEW CART
@@ -54,6 +61,8 @@ def remove_item(item_id: int, db: Session = Depends(get_db)):
 # 🧹 CLEAR CART
 @router.delete("/clear-cart/{session_id}")
 def clear_cart(session_id: str, db: Session = Depends(get_db)):
+
+    print(f"CLEARING CART: {session_id}")
 
     db.query(Cart).filter(
         Cart.session_id == session_id

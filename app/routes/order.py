@@ -119,56 +119,64 @@ def place_order(
     ).delete()
 
     db.commit()
-
     # 📧 ADMIN EMAIL
-    send_email(
-        "hello.evas.crochet26@gmail.com",
-        "🧶 New Paid Order",
-        f"""
-🧶 NEW PAID ORDER
+    try:
+        send_email(
+            "hello.evas.crochet26@gmail.com",
+            "🧶 New Paid Order",
+            f"""
+                🧶 NEW PAID ORDER
 
-Customer Name: {order.full_name}
-Phone: {order.phone}
-Email: {order.email}
+                Customer Name: {order.full_name}
+                Phone: {order.phone}
+                Email: {order.email}
 
-Address:
-{order.address}
+                Address:
+                {order.address}
 
-------------------------
-Items Ordered:
-{items_text}
+                ------------------------
+                Items Ordered:
+                {items_text}
 
-------------------------
-Products Total: ₹{total}
-Shipping: ₹{shipping_total}
-Final Total: ₹{final_total}
+                ------------------------
+                Products Total: ₹{total}
+                Shipping: ₹{shipping_total}
+                Final Total: ₹{final_total}
 
-✅ Payment Status: PAID
-"""
-    )
+                ✅ Payment Status: PAID
+                """
+                        )
+    except Exception as e:
+        print("ADMIN EMAIL ERROR:", str(e))
 
     # 📧 CUSTOMER EMAIL
-    send_email(
-        email,
-        "Order Confirmed 🧶",
-        f"""
-Hi {full_name},
+    try:
+        send_email(
+            email,
+            "Order Confirmed 🧶",
+            f"""
+                Hi {full_name},
 
-Your payment was successful 💖
+                Your payment was successful 💖
 
-Items Ordered:
-{items_text}
+                Items Ordered:
+                {items_text}
 
-Shipping: ₹{shipping_total}
-Total Paid: ₹{final_total}
+                Shipping: ₹{shipping_total}
+                Total Paid: ₹{final_total}
 
-Your order has been confirmed 🧶✨
+                Your order has been confirmed 🧶✨
 
-Thank you for shopping with Eva Crochet 💕
-"""
-    )
-
-    return {"message": "Order placed successfully ✅"}
+                Thank you for shopping with Eva Crochet 💕
+                """
+                        )
+    except Exception as e:
+        print("CUSTOMER EMAIL ERROR:", str(e))
+    
+    print("PLACE ORDER COMPLETED SUCCESSFULLY")
+    return {
+        "message": "Order placed successfully ✅"
+    }
 
 
 # ❌ CANCEL ORDER

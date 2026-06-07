@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 
 # 🧠 Load env variables
 load_dotenv()
-print("KEY:", os.getenv("RAZORPAY_KEY_ID"))
-print("SECRET:", os.getenv("RAZORPAY_KEY_SECRET"))
+
+print("Razorpay credentials loaded ✅")
 
 # 🧠 Import models (VERY IMPORTANT for table creation)
 import app.models.product
@@ -89,11 +89,15 @@ async def verify_payment(request: Request):
 
     try:
 
+        print("VERIFY PAYMENT REQUEST:", data)
+
         razorpay_client.utility.verify_payment_signature({
             "razorpay_order_id": data["razorpay_order_id"],
             "razorpay_payment_id": data["razorpay_payment_id"],
             "razorpay_signature": data["razorpay_signature"],
         })
+
+        print("PAYMENT VERIFIED SUCCESSFULLY")
 
         return {
             "success": True
@@ -101,8 +105,9 @@ async def verify_payment(request: Request):
 
     except Exception as e:
 
-        print("Verification Error:", e)
+        print("VERIFICATION ERROR:", str(e))
 
         return {
-            "success": False
+            "success": False,
+            "error": str(e)
         }
